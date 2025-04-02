@@ -1,0 +1,78 @@
+{
+    "name": "elfeffe/laravel-google-indexing",
+    "description": "Index Laravel website in Google via Indexing API",
+    "keywords": [
+        "elfeffe",
+        "laravel",
+        "google",
+        "indexing",
+        "seo",
+        "laravel-google-indexing"
+    ],
+    "homepage": "https://github.com/elfeffe/laravel-google-indexing",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Famdirksen",
+            "email": "info@famdirksen.nl",
+            "homepage": "https://famdirksen.nl",
+            "role": "Original Company"
+        },
+        {
+            "name": "Robin Dirksen",
+            "email": "robin@famdirksen.nl",
+            "homepage": "https://robindirksen.nl",
+            "role": "Original Developer"
+        },
+        {
+            "name": "Federico Cannas",
+            "email": "info@neoteo.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "google/apiclient": "^2.15",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/contracts": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13",
+        "orchestra/testbench": "^9.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Elfeffe\\LaravelGoogleIndexing\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Elfeffe\\LaravelGoogleIndexing\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "format": "vendor/bin/pint"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Elfeffe\\LaravelGoogleIndexing\\LaravelGoogleIndexingServiceProvider"
+            ],
+            "aliases": {
+                "LaravelGoogleIndexing": "Elfeffe\\LaravelGoogleIndexing\\Facades\\LaravelGoogleIndexingFacade"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
