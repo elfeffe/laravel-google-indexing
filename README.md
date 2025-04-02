@@ -80,7 +80,7 @@ If you discover any security related issues, please email info@neoteo.com instea
 
 ## Credits
 
-- [Federico Cannas](https://github.com/elFede) (Current maintainer)
+- [Federico Reggiani](https://github.com/elfeffe) (Current maintainer)
 - [Robin Dirksen](https://github.com/robindirksen1) (Original developer)
 - [Famdirksen](https://famdirksen.nl) (Original company)
 - [All Contributors](../../contributors)
