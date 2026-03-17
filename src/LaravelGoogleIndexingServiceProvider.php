@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Elfeffe\LaravelGoogleIndexing;
 
 use Elfeffe\LaravelGoogleIndexing\LaravelGoogleIndexing;
+use Elfeffe\LaravelGoogleIndexing\Helpers\IndexingHelper;
 use Illuminate\Support\ServiceProvider;
 
 class LaravelGoogleIndexingServiceProvider extends ServiceProvider
@@ -14,11 +15,21 @@ class LaravelGoogleIndexingServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->runningInConsole()) {
-            $this->publishes([
-                $this->getConfigPath() => config_path('laravel-google-indexing.php'),
-            ], 'config');
-        }
+        // Publish config
+        $this->publishes([
+            __DIR__ . '/../config/laravel-google-indexing.php' => config_path('laravel-google-indexing.php'),
+        ], 'laravel-google-indexing-config');
+        
+        // Publish migrations
+        $this->publishes([
+            __DIR__ . '/../database/migrations/create_google_indexing_records_table.php.stub' => $this->getMigrationFileName('create_google_indexing_records_table.php'),
+        ], 'laravel-google-indexing-migrations');
+        
+        // Merge config
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/laravel-google-indexing.php',
+            'laravel-google-indexing'
+        );
     }
 
     /**
@@ -26,18 +37,33 @@ class LaravelGoogleIndexingServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom($this->getConfigPath(), 'laravel-google-indexing');
-
-        $this->app->singleton('laravel_google_indexing', function () {
-            return new LaravelGoogleIndexing();
+        // Register the main class to use with the facade
+        $this->app->singleton('laravel-google-indexing', function () {
+            return new LaravelGoogleIndexing;
         });
+        
+        // Register the helper class
+        $this->app->singleton(IndexingHelper::class, function ($app) {
+            return new IndexingHelper(
+                $app->make(LaravelGoogleIndexing::class)
+            );
+        });
+        
+        // Register alias for helper
+        $this->app->alias(IndexingHelper::class, 'google-indexing-helper');
     }
-
+    
     /**
-     * Get the config file path.
+     * Returns existing migration file if found, else uses the current timestamp.
      */
-    protected function getConfigPath(): string
+    protected function getMigrationFileName(string $migrationFileName): string
     {
-        return __DIR__ . '/../config/laravel-google-indexing.php';
+        $timestamp = date('Y_m_d_His');
+        
+        $filesystem = $this->app->make('files');
+        
+        return $filesystem->glob(database_path('migrations/*.php'))
+            ? database_path("migrations/{$timestamp}_{$migrationFileName}")
+            : database_path("migrations/{$timestamp}_{$migrationFileName}");
     }
 }

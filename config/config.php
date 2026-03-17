@@ -5,7 +5,7 @@ return [
         'auth_config' => storage_path('google_auth_config.json'),
 
         'scopes' => [
-            \Google_Service_Indexing::INDEXING,
+            'https://www.googleapis.com/auth/indexing',
         ],
     ],
 ];
