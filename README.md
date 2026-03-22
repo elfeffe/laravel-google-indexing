@@ -1,90 +1,190 @@
-# Index pages in Google
+# elfeffe/laravel-google-indexing
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/elfeffe/laravel-google-indexing.svg?style=flat-square)](https://packagist.org/packages/elfeffe/laravel-google-indexing)
-[![Total Downloads](https://img.shields.io/packagist/dt/elfeffe/laravel-google-indexing.svg?style=flat-square)](https://packagist.org/packages/elfeffe/laravel-google-indexing)
+Submit URLs to Google's Indexing API from Laravel and track successful submissions in `google_indexing_records`.
 
-Request a page to be indexed by Google using the [Indexing API](https://developers.google.com/search/apis/indexing-api/v3/quickstart).
+This package is useful for sites that are eligible for the Google Indexing API and want:
 
-This package is a fork of [famdirksen/laravel-google-indexing](https://packagist.org/packages/famdirksen/laravel-google-indexing) updated for Laravel 11 and 12 compatibility.
+- direct URL update/delete requests
+- helper methods for quota-aware indexing
+- a reusable `GoogleIndexable` trait for models
+- persistent records of successful submissions
 
-Please, take a note at the allowed pages that can be indexed using this API at https://developers.google.com/search/apis/indexing-api/v3/quickstart.
+## Requirements
+
+- PHP 8.4+
+- Laravel 12 or 13
+- a Google service account configured for the Indexing API
+
+## Important note
+
+Google only allows the Indexing API for specific content types, such as job posting and livestream pages. Check the official docs before using it broadly:
+
+[Google Indexing API docs](https://developers.google.com/search/apis/indexing-api/v3/quickstart)
 
 ## Installation
 
-You can install the package via composer:
+```bash
+composer require elfeffe/laravel-google-indexing:^1.0
+```
+
+Publish the config:
 
 ```bash
-composer require elfeffe/laravel-google-indexing
+php artisan vendor:publish --tag=laravel-google-indexing-config
 ```
 
-Next you have to follow the setup instructions from Google, this can be found here [Google Indexing API documentation](https://developers.google.com/search/apis/indexing-api/v3/prereqs).
+Publish the migration:
 
-You need to make a file in your storage direct, but you can override this setting in config with the key `laravel-google-indexing.google.auth_config`.
+```bash
+php artisan vendor:publish --tag=laravel-google-indexing-migrations
+```
 
-## Usage
+The package now reuses an existing published `create_google_indexing_records_table` migration if one is already present, so republishing does not create duplicate migration files.
 
-> NOTE: this package works only for verified sites in your Google Search Console account
+## Configuration
 
-Inform Google about a new or updated URL:
+By default the package expects the Google auth JSON at:
+
+```php
+storage_path('google_auth_config.json')
+```
+
+You can override it in `config/laravel-google-indexing.php`:
+
+```php
+return [
+    'google' => [
+        'auth_config' => storage_path('google_auth_config.json'),
+        'scopes' => [
+            'https://www.googleapis.com/auth/indexing',
+        ],
+    ],
+];
+```
+
+You may also pass a JSON string or array directly when instantiating the service.
+
+## Basic usage
+
+### Facade
+
 ```php
 use Elfeffe\LaravelGoogleIndexing\Facades\LaravelGoogleIndexingFacade as LaravelGoogleIndexing;
 
-LaravelGoogleIndexing::update('https://www.my-domain.com')
+LaravelGoogleIndexing::update('https://example.com/page');
+LaravelGoogleIndexing::delete('https://example.com/page');
+LaravelGoogleIndexing::status('https://example.com/page');
 ```
 
-Delete an URL from the index:
-```php
-use Elfeffe\LaravelGoogleIndexing\Facades\LaravelGoogleIndexingFacade as LaravelGoogleIndexing;
-
-LaravelGoogleIndexing::delete('https://www.my-domain.com')
-```
-
-Get the status of an URL:
-```php
-use Elfeffe\LaravelGoogleIndexing\Facades\LaravelGoogleIndexingFacade as LaravelGoogleIndexing;
-
-LaravelGoogleIndexing::status('https://www.my-domain.com')
-```
-
-### Without using the Facade
-
-You can also use the class directly:
+### Direct service usage
 
 ```php
 use Elfeffe\LaravelGoogleIndexing\LaravelGoogleIndexing;
 
-(new LaravelGoogleIndexing)->update('https://www.my-domain.com')
+$googleIndexing = new LaravelGoogleIndexing();
+
+$googleIndexing->update('https://example.com/page');
 ```
 
-For dealing with multiple urls, you can pass an array with multiple updated/deleted urls:
+### Custom auth config
+
 ```php
-use Elfeffe\LaravelGoogleIndexing\Facades\LaravelGoogleIndexingFacade as LaravelGoogleIndexing;
+use Elfeffe\LaravelGoogleIndexing\LaravelGoogleIndexing;
 
-LaravelGoogleIndexing::multiplePublish([
-    ['URL_UPDATED' => 'https://www.site.com'], 
-    ['URL_DELETED' => 'https://www.site.com/deleted-url']
-])
+$googleIndexing = LaravelGoogleIndexing::forAuthConfig(
+    storage_path('my-google-service-account.json')
+);
 ```
 
-### Changelog
+## Model indexing
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+If a model exposes a canonical URL, you can use the `GoogleIndexable` trait.
 
-## Contributing
+```php
+use Elfeffe\LaravelGoogleIndexing\Traits\GoogleIndexable;
+use Illuminate\Database\Eloquent\Model;
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+class Article extends Model
+{
+    use GoogleIndexable;
 
-### Security
+    public function getGoogleIndexingUrl(): string
+    {
+        return route('articles.show', $this);
+    }
+}
+```
 
-If you discover any security related issues, please email info@neoteo.com instead of using the issue tracker.
+Then:
+
+```php
+use Elfeffe\LaravelGoogleIndexing\LaravelGoogleIndexing;
+
+$service = new LaravelGoogleIndexing();
+$service->updateModel($article);
+```
+
+## Helper usage
+
+The helper wraps the service with daily quota tracking based on successful submissions stored in `google_indexing_records`.
+
+```php
+use Elfeffe\LaravelGoogleIndexing\Helpers\IndexingHelper;
+
+$helper = app(IndexingHelper::class);
+
+$helper->indexUrl('https://example.com/page');
+$helper->indexUrls([
+    'https://example.com/page-1',
+    'https://example.com/page-2',
+]);
+$helper->indexModel($article);
+```
+
+### Quota helpers
+
+```php
+$helper->isQuotaExceeded();
+$helper->getRemainingQuota();
+```
+
+Using the trait:
+
+```php
+Article::getTodayIndexingCount();
+Article::getRemainingDailyQuota();
+Article::query()->needsGoogleIndexing(30)->get();
+```
+
+## Stored records
+
+Successful requests are stored in `google_indexing_records` with:
+
+- `url`
+- `status`
+- `sent_at`
+- `response_data`
+- `error_message`
+- optional morph relation via `indexable_type` / `indexable_id`
+
+This lets you avoid unnecessary resubmissions and track recent indexing activity.
+
+## Exceptions
+
+Quota errors throw:
+
+```php
+Elfeffe\LaravelGoogleIndexing\Exceptions\GoogleQuotaExceededException
+```
+
+You should catch it if you are bulk processing URLs.
 
 ## Credits
 
-- [Federico Reggiani](https://github.com/elfeffe) (Current maintainer)
-- [Robin Dirksen](https://github.com/robindirksen1) (Original developer)
-- [Famdirksen](https://famdirksen.nl) (Original company)
-- [All Contributors](../../contributors)
+- [Federico Reggiani](https://github.com/elfeffe)
+- [Robin Dirksen](https://github.com/robindirksen1)
+- [Famdirksen](https://famdirksen.nl)
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT. See `LICENSE.md`.
