@@ -15,7 +15,7 @@ class GoogleIndexingRecord extends Model
      * @var array
      */
     protected $guarded = [];
-    
+
     /**
      * The attributes that should be cast.
      *
@@ -25,13 +25,14 @@ class GoogleIndexingRecord extends Model
         'sent_at' => 'datetime',
         'response_data' => 'array',
     ];
-    
+
     /**
      * The possible statuses for an indexing record.
      */
     public const STATUS_SUCCESS = 'success';
+
     public const STATUS_QUOTA_EXCEEDED = 'quota_exceeded';
-    
+
     /**
      * Get the parent indexable model (if applicable).
      */
@@ -39,7 +40,7 @@ class GoogleIndexingRecord extends Model
     {
         return $this->morphTo();
     }
-    
+
     /**
      * Scope a query to only include successful indexing records.
      */
@@ -47,7 +48,7 @@ class GoogleIndexingRecord extends Model
     {
         return $query->where('status', self::STATUS_SUCCESS);
     }
-    
+
     /**
      * Scope a query to only include failed indexing records.
      */
@@ -55,11 +56,11 @@ class GoogleIndexingRecord extends Model
     {
         return $query->where('status', 'failed');
     }
-    
+
     /**
      * Mark record as successful.
      */
-    public function markAsSuccess(array $responseData = null): self
+    public function markAsSuccess(?array $responseData = null): self
     {
         $this->status = self::STATUS_SUCCESS;
         $this->sent_at = now();
@@ -67,14 +68,14 @@ class GoogleIndexingRecord extends Model
             $this->response_data = $responseData;
         }
         $this->save();
-        
+
         return $this;
     }
-    
+
     /**
      * Mark record as failed.
      */
-    public function markAsFailed(string $errorMessage = null, array $responseData = null): self
+    public function markAsFailed(?string $errorMessage = null, ?array $responseData = null): self
     {
         $this->status = 'failed';
         $this->error_message = $errorMessage;
@@ -82,7 +83,7 @@ class GoogleIndexingRecord extends Model
             $this->response_data = $responseData;
         }
         $this->save();
-        
+
         return $this;
     }
-} 
+}
