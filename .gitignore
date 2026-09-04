@@ -7,3 +7,5 @@ coverage/
 
 # Local-only agent scratch (SDD workspaces)
 /.superpowers/
+
+/laravel-google-indexing
